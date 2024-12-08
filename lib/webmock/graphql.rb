@@ -30,8 +30,14 @@ module Webmock
           end
 
           def variables
+            return unless variables_defined?
+
             pr = self.class.variables_proc
-            pr && instance_exec(&pr)
+            instance_exec(&pr)
+          end
+
+          def variables_defined?
+            !!self.class.variables_proc
           end
 
           def data
@@ -137,11 +143,12 @@ module Webmock
         url ||= Webmock::Graphql.default_url
         raise "url is not set" if url.nil?
 
+        request_body = { query: stub_graphql_context.query }
+
+        request_body[:variables] = stub_graphql_context.variables if stub_graphql_context.variables_defined?
+
         WebMock.stub_request(:post, url).with(
-          body: {
-            query: stub_graphql_context.query,
-            variables: stub_graphql_context.variables
-          }
+          body: request_body
         ).to_return(
           body: {
             data: stub_graphql_context.data,
